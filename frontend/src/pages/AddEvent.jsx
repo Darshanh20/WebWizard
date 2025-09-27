@@ -8,6 +8,11 @@ export default function AddEvent() {
     name: "",
     location: "",
     time: "",
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    endTime: "",
+    coordinator: "",
     maxCapacity: "",
     description: "",
   });
@@ -17,6 +22,8 @@ export default function AddEvent() {
   const [toast, setToast] = useState({ show: false, message: "" });
   const navigate = useNavigate();
   const fileInputRef = useRef();
+  const startDateRef = useRef();
+  const startTimeRef = useRef();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,14 +38,14 @@ export default function AddEvent() {
 
   const validateField = (key, value) => {
     let msg = "";
-    if (["name", "location", "time", "maxCapacity"].includes(key)) {
+  if (["name", "location", "time", "maxCapacity", "startDate", "startTime", "coordinator"].includes(key)) {
       if (!value || String(value).trim() === "") {
         msg =
           key === "name"
             ? "Event Title is required"
             : key === "location"
             ? "Event Location is required"
-            : key === "time"
+            : key === "time" || key === "startDate" || key === "startTime"
             ? "Event Date & Time is required"
             : "Maximum Attendees is required";
       }
@@ -57,15 +64,28 @@ export default function AddEvent() {
     // validate required fields
     const v1 = validateField("name", form.name);
     const v2 = validateField("location", form.location);
-    const v3 = validateField("time", form.time);
+    const vco = validateField("coordinator", form.coordinator);
+    const v3a = validateField("startDate", form.startDate);
+    const v3b = validateField("startTime", form.startTime);
     const v4 = validateField("maxCapacity", form.maxCapacity);
-    if (!v1 || !v2 || !v3 || !v4) {
+    if (!v1 || !v2 || !vco || !v3a || !v3b || !v4) {
       return;
     }
 
     const formData = new FormData();
-    for (const key in form) {
-      formData.append(key, form[key]);
+    // compose legacy `time` field (start date + time) for backend compatibility
+    const composedTime = form.startDate && form.startTime ? `${form.startDate}T${form.startTime}` : form.time;
+    const payload = { ...form, time: composedTime };
+    for (const key in payload) {
+      // don't include intermediate start/end fields here; append endTime explicitly below
+      if (["startDate", "startTime", "endDate", "endTime"].includes(key)) continue;
+      formData.append(key, payload[key]);
+    }
+    // append endTime separately if provided (compose date+time)
+    if (form.endDate && form.endTime) {
+      formData.append("endTime", `${form.endDate}T${form.endTime}`);
+    } else if (form.endTime) {
+      formData.append("endTime", form.endTime);
     }
     if (photo) {
       formData.append("photo", photo);
@@ -76,8 +96,8 @@ export default function AddEvent() {
       await API.post("/events", formData, {
         headers: { "x-auth-token": token, "Content-Type": "multipart/form-data" },
       });
-      setToast({ show: true, message: "Event created successfully!" });
-      setForm({ name: "", location: "", time: "", maxCapacity: "", description: "" });
+  setToast({ show: true, message: "Event created successfully!" });
+  setForm({ name: "", location: "", time: "", startDate: "", startTime: "", endDate: "", endTime: "", coordinator: "", maxCapacity: "", description: "" });
       setPhoto(null);
       setPreviewUrl(null);
       setErrors({});
@@ -133,24 +153,19 @@ export default function AddEvent() {
                 </div>
                 {errors.location && <p className="text-sm text-red-600 mt-1">{errors.location}</p>}
               </div>
-            </div>
-          </div>
 
-          {/* Additional Info Card */}
-          <div className="p-4 bg-white rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold mb-4">Additional Info</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Event Date & Time *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Coordinator *</label>
                 <input
-                  type="datetime-local"
-                  name="time"
-                  value={form.time}
+                  type="text"
+                  name="coordinator"
+                  placeholder="Event Coordinator"
+                  value={form.coordinator}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full p-2 border ${errors.time ? "border-red-500" : "border-gray-300"} rounded`}
+                  className={`w-full p-2 border ${errors.coordinator ? "border-red-500" : "border-gray-300"} rounded`}
                 />
-                {errors.time && <p className="text-sm text-red-600 mt-1">{errors.time}</p>}
+                {errors.coordinator && <p className="text-sm text-red-600 mt-1">{errors.coordinator}</p>}
               </div>
 
               <div>
@@ -176,9 +191,98 @@ export default function AddEvent() {
                 </div>
                 {errors.maxCapacity && <p className="text-sm text-red-600 mt-1">{errors.maxCapacity}</p>}
               </div>
-            </div>
 
-            <div className="mt-4">
+              <div className="col-span-1 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Event Date & Time *</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        if (startDateRef.current) {
+                          if (typeof startDateRef.current.showPicker === "function") {
+                            startDateRef.current.showPicker();
+                          } else {
+                            startDateRef.current.focus();
+                            startDateRef.current.click();
+                          }
+                        }
+                      } catch (e) {
+                        startDateRef.current && startDateRef.current.focus();
+                      }
+                    }}
+                    className="text-blue-600 hover:text-blue-700"
+                    aria-label="Open calendar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M6 2a1 1 0 011 1v1h6V3a1 1 0 112 0v1h1a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V3a1 1 0 011-1zM4 8h12v7H4V8z" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
+                  <div>
+                    <label className="text-xs text-gray-500">Start Date</label>
+                    <input
+                      ref={startDateRef}
+                      type="date"
+                      name="startDate"
+                      value={form.startDate}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      style={{ accentColor: "#2563eb" }}
+                      className={`w-full p-2 border ${errors.startDate ? "border-red-500" : "border-gray-300"} rounded`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Start Time</label>
+                    <input
+                      ref={startTimeRef}
+                      type="time"
+                      name="startTime"
+                      value={form.startTime}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      style={{ accentColor: "#2563eb" }}
+                      className={`w-full p-2 border ${errors.startTime ? "border-red-500" : "border-gray-300"} rounded`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">End Date</label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={form.endDate}
+                      onChange={handleChange}
+                      style={{ accentColor: "#2563eb" }}
+                      className="w-full p-2 border border-gray-300 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">End Time</label>
+                    <input
+                      type="time"
+                      name="endTime"
+                      value={form.endTime}
+                      onChange={handleChange}
+                      style={{ accentColor: "#2563eb" }}
+                      className="w-full p-2 border border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+                {(errors.startDate || errors.startTime) && (
+                  <p className="text-sm text-red-600 mt-1">{errors.startDate || errors.startTime}</p>
+                )}
+              </div>
+
+              
+            </div>
+          </div>
+
+          {/* Additional Info Card */}
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Additional Info</h2>
+            <div className="mt-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">Event Description</label>
               <textarea
                 name="description"
@@ -245,11 +349,11 @@ export default function AddEvent() {
             <button
               type="button"
               onClick={() => {
-                setForm({ name: "", location: "", time: "", maxCapacity: "", description: "" });
-                setPhoto(null);
-                setPreviewUrl(null);
-                setErrors({});
-              }}
+                  setForm({ name: "", location: "", time: "", startDate: "", startTime: "", endDate: "", endTime: "", coordinator: "", maxCapacity: "", description: "" });
+                  setPhoto(null);
+                  setPreviewUrl(null);
+                  setErrors({});
+                }}
               className="border border-gray-300 text-gray-700 py-3 px-4 rounded hover:bg-gray-100 w-full md:w-auto flex-1"
             >
               Reset Form
