@@ -101,14 +101,7 @@ event-management-platform/
 │── frontend/
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── AddEvent.jsx
-│   │   │   ├── ManageEvents.jsx
-│   │   │   ├── EventDetails.jsx
-│   │   │   ├── signup.jsx
-│   │   │   └── login.jsx
 │   │   ├── components/
-│   │   │   ├── Navbar.jsx
-│   │   │   └── EventCard.jsx
 │   │   ├── App.jsx
 │   │   ├── api.js
 │   │   └── main.jsx
