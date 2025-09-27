@@ -206,15 +206,6 @@ npm run dev
 
 ---
 
-## 📸 Screenshots (optional)
-
-- Admin Dashboard
-- Manage Events Page
-- Student Registration Page
-- Event Details Page
-
----
-
 ## 🔮 Future Enhancements
 
 - 🔔 Email & SMS Notifications.
