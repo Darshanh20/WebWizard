@@ -201,7 +201,7 @@ export default function EventDetails() {
           <div className="md:col-span-1">
             {event.photo && (
               <img
-                src={`http://localhost:5000${event.photo}`}
+                src={event.photo.startsWith('http') ? event.photo : `http://localhost:5000${event.photo}`}
                 alt={event.name}
                 className="w-full h-48 object-cover rounded-md"
               />

@@ -3,8 +3,10 @@ const router = express.Router();
 const Event = require('../models/Event');
 const User = require('../models/User'); // Import User model
 const { auth, adminAuth } = require('../middleware/auth');
-const multer = require('multer'); // Keep multer import for now, might remove if not needed elsewhere
+const axios = require('axios');
+const fs = require('fs');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 // Configure Multer for file uploads - NO LONGER NEEDED FOR URL-BASED PHOTOS
 // const storage = multer.diskStorage({
@@ -19,11 +21,44 @@ const path = require('path');
 // const upload = multer({ storage: storage });
 
 // Create a new event (Admin only)
+// Create event: supports multipart file upload (photo) OR a remote image URL (photoUrl).
 router.post('/', auth, adminAuth, async (req, res) => {
   try {
     const { name, location, time, maxCapacity, description, photoUrl } = req.body;
-    // Use photoUrl directly if provided
-    const photo = photoUrl;
+    let photo = undefined;
+
+    // If photoUrl is provided, attempt to fetch and save the image locally under /uploads
+    if (photoUrl && typeof photoUrl === 'string' && photoUrl.startsWith('http')) {
+      try {
+        // only accept http/https and basic image mime types
+        const response = await axios.get(photoUrl, { responseType: 'arraybuffer', timeout: 10000 });
+        const contentType = response.headers['content-type'] || '';
+        if (!contentType.startsWith('image/')) {
+          return res.status(400).json({ msg: 'Provided URL does not point to an image.' });
+        }
+
+        // ensure uploads dir exists
+        const uploadsDir = path.resolve(__dirname, '..', 'uploads');
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+        const ext = contentType.split('/')[1].split(';')[0] || 'jpg';
+        const filename = `${Date.now()}-${uuidv4()}.${ext}`;
+        const filepath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filepath, response.data);
+
+        // store public path (served under /uploads)
+        photo = `/uploads/${filename}`;
+      } catch (fetchErr) {
+        console.error('Failed to fetch remote image:', fetchErr.message || fetchErr);
+        return res.status(400).json({ msg: 'Unable to fetch image from provided URL.' });
+      }
+    }
+
+    // If multipart file upload handling is later added, prefer that; for now we accept photo from body or fetched file above
+    if (!photo && req.file && req.file.path) {
+      // multer would populate req.file.path; adapt if multer is reintroduced
+      photo = `/${req.file.path.replace(/\\/g, '/')}`;
+    }
 
     const newEvent = new Event({
       name,

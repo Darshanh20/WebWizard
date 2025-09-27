@@ -3,35 +3,11 @@ import { API } from "../api";
 import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
 
-export default function AddEvent() {
+function AddEvent() {
   console.log("AddEvent component rendered");
   useEffect(() => {
     console.log('AddEvent mounted');
   }, []);
-
-  class ErrorBoundary extends React.Component {
-    constructor(props) {
-      super(props);
-      this.state = { hasError: false, error: null };
-    }
-    static getDerivedStateFromError(error) {
-      return { hasError: true, error };
-    }
-    componentDidCatch(error, info) {
-      console.error('ErrorBoundary caught', error, info);
-    }
-    render() {
-      if (this.state.hasError) {
-        return (
-          <div className="p-6 bg-red-50 border border-red-200 rounded">
-            <h2 className="text-lg font-semibold text-red-700">Something went wrong rendering the Add Event page.</h2>
-            <pre className="text-sm text-gray-700 mt-2">{String(this.state.error)}</pre>
-          </div>
-        );
-      }
-      return this.props.children;
-    }
-  }
   const [form, setForm] = useState({
     name: "",
     location: "",
@@ -45,6 +21,8 @@ export default function AddEvent() {
     description: "",
   });
   const [photo, setPhoto] = useState(null);
+  const [photoUrlInputOpen, setPhotoUrlInputOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState(null);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState({ show: false, message: "" });
@@ -107,7 +85,7 @@ export default function AddEvent() {
       return;
     }
 
-    const formData = new FormData();
+  const formData = new FormData();
     // compose legacy `time` field (start date + time) for backend compatibility
     const composedTime = form.startDate && form.startTime ? `${form.startDate}T${form.startTime}` : form.time;
     const payload = { ...form, time: composedTime };
@@ -124,13 +102,36 @@ export default function AddEvent() {
     }
     if (photo) {
       formData.append("photo", photo);
+    } else if (photoUrl) {
+      // if user provided an external image URL, send it as photoUrl
+      formData.append('photoUrl', photoUrl);
+    }
+
+    // build JSON payload equivalent for when we send photoUrl as JSON
+    const payloadJson = {};
+    for (const key in payload) {
+      if (["startDate", "startTime", "endDate", "endTime"].includes(key)) continue;
+      payloadJson[key] = payload[key];
+    }
+    if (form.endDate && form.endTime) {
+      payloadJson.endTime = `${form.endDate}T${form.endTime}`;
+    } else if (form.endTime) {
+      payloadJson.endTime = form.endTime;
     }
 
     try {
       const token = localStorage.getItem("token");
-      await API.post("/events", formData, {
-        headers: { "x-auth-token": token, "Content-Type": "multipart/form-data" },
-      });
+      if (photoUrl && !photo) {
+        // send JSON payload when using an external URL (backend will fetch and save)
+        const jsonPayload = { ...payloadJson, photoUrl };
+        await API.post("/events", jsonPayload, {
+          headers: { "x-auth-token": token, "Content-Type": "application/json" },
+        });
+      } else {
+        await API.post("/events", formData, {
+          headers: { "x-auth-token": token, "Content-Type": "multipart/form-data" },
+        });
+      }
   setToast({ show: true, message: "Event created successfully!" });
   setForm({ name: "", location: "", time: "", startDate: "", startTime: "", endDate: "", endTime: "", coordinator: "", maxCapacity: "", description: "" });
       setPhoto(null);
@@ -341,11 +342,58 @@ export default function AddEvent() {
                   if (file) {
                     setPhoto(file);
                     setPreviewUrl(URL.createObjectURL(file));
+                    setPhotoUrl('');
                   }
                 }}
                 className="hidden"
               />
             </div>
+
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPhotoUrlInputOpen(true)}
+                className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200"
+              >
+                Use Image URL
+              </button>
+              {photoUrl && (
+                <div className="flex items-center gap-2">
+                  <img src={photoUrl} alt="url-preview" className="h-12 w-20 object-cover rounded border" />
+                  <button type="button" onClick={() => { setPhotoUrl(''); setPreviewUrl(null); }} className="text-sm text-red-600">Remove</button>
+                </div>
+              )}
+            </div>
+
+            {/* Photo URL modal */}
+            {photoUrlInputOpen && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white p-4 rounded shadow w-11/12 max-w-md">
+                  <h3 className="font-semibold mb-2">Enter Image URL (open-source / public)</h3>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={photoUrl}
+                    onChange={(e) => {
+                      setPhotoUrl(e.target.value);
+                      setPreviewUrl(e.target.value || null);
+                      setPhoto(null);
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded mb-3"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setPhotoUrlInputOpen(false)} className="px-3 py-2 rounded border">Cancel</button>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrlInputOpen(false)}
+                      className="px-3 py-2 bg-blue-600 text-white rounded"
+                    >
+                      Use URL
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Buttons */}
@@ -375,6 +423,40 @@ export default function AddEvent() {
 
       <Toast open={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: "" })} />
     </div>
+    </ErrorBoundary>
+  );
+}
+
+// Stable ErrorBoundary outside the component to avoid remounting input handlers/focus when
+// the component re-renders. This prevents the single-character typing/caret jump bug.
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 bg-red-50 border border-red-200 rounded">
+          <h2 className="text-lg font-semibold text-red-700">Something went wrong rendering the Add Event page.</h2>
+          <pre className="text-sm text-gray-700 mt-2">{String(this.state.error)}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function AddEventWithBoundary(props) {
+  return (
+    <ErrorBoundary>
+      <AddEvent {...props} />
     </ErrorBoundary>
   );
 }
