@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { API } from "../api";
 import { useNavigate } from "react-router-dom";
+import Toast from "../components/Toast";
 
 export default function AddEvent() {
   const [form, setForm] = useState({
@@ -11,18 +12,57 @@ export default function AddEvent() {
     description: "",
   });
   const [photo, setPhoto] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [toast, setToast] = useState({ show: false, message: "" });
   const navigate = useNavigate();
+  const fileInputRef = useRef();
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    setPhoto(e.target.files[0]);
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const validateField = (key, value) => {
+    let msg = "";
+    if (["name", "location", "time", "maxCapacity"].includes(key)) {
+      if (!value || String(value).trim() === "") {
+        msg =
+          key === "name"
+            ? "Event Title is required"
+            : key === "location"
+            ? "Event Location is required"
+            : key === "time"
+            ? "Event Date & Time is required"
+            : "Maximum Attendees is required";
+      }
+    }
+    setErrors((s) => ({ ...s, [key]: msg }));
+    return msg === "";
+  };
+
+  const handleBlur = (e) => {
+    validateField(e.target.name, e.target.value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // validate required fields
+    const v1 = validateField("name", form.name);
+    const v2 = validateField("location", form.location);
+    const v3 = validateField("time", form.time);
+    const v4 = validateField("maxCapacity", form.maxCapacity);
+    if (!v1 || !v2 || !v3 || !v4) {
+      return;
+    }
+
     const formData = new FormData();
     for (const key in form) {
       formData.append(key, form[key]);
@@ -36,16 +76,12 @@ export default function AddEvent() {
       await API.post("/events", formData, {
         headers: { "x-auth-token": token, "Content-Type": "multipart/form-data" },
       });
-      alert("Event added successfully!");
-      setForm({
-        name: "",
-        location: "",
-        time: "",
-        maxCapacity: "",
-        description: "",
-      });
+      setToast({ show: true, message: "Event created successfully!" });
+      setForm({ name: "", location: "", time: "", maxCapacity: "", description: "" });
       setPhoto(null);
-      navigate("/admin/events/manage"); // Redirect to manage events after adding
+      setPreviewUrl(null);
+      setErrors({});
+      setTimeout(() => navigate("/admin/events/manage"), 900);
     } catch (err) {
       alert(err.response?.data?.msg || "Failed to add event");
       console.error(err);
@@ -56,67 +92,173 @@ export default function AddEvent() {
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Add New Event</h1>
 
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Event Name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded"
-            required
-          />
-          <input
-            type="text"
-            name="location"
-            placeholder="Location"
-            value={form.location}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded"
-            required
-          />
-          <input
-            type="datetime-local"
-            name="time"
-            value={form.time}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded"
-            required
-          />
-          <input
-            type="number"
-            name="maxCapacity"
-            placeholder="Max Capacity"
-            value={form.maxCapacity}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded"
-            required
-          />
-          <textarea
-            name="description"
-            placeholder="Description"
-            value={form.description}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded resize-y"
-            rows="4"
-            required
-          ></textarea>
-          <input
-            type="file"
-            name="photo"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="w-full p-2 border border-gray-300 rounded"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 w-full"
-          >
-            Add Event
-          </button>
+      <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Event Details Card */}
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Event Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Event Title"
+                  value={form.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full p-2 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded pl-3`}
+                />
+                {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Location *</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    {/* map pin icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.05 8.05a7 7 0 119.9 0L10 18.414 5.05 8.05zM10 10a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <input
+                    type="text"
+                    name="location"
+                    placeholder="Event Location"
+                    value={form.location}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full p-2 border ${errors.location ? "border-red-500" : "border-gray-300"} rounded pl-10`}
+                  />
+                </div>
+                {errors.location && <p className="text-sm text-red-600 mt-1">{errors.location}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Info Card */}
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Additional Info</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Event Date & Time *</label>
+                <input
+                  type="datetime-local"
+                  name="time"
+                  value={form.time}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full p-2 border ${errors.time ? "border-red-500" : "border-gray-300"} rounded`}
+                />
+                {errors.time && <p className="text-sm text-red-600 mt-1">{errors.time}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Attendees *</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    {/* users icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path fillRule="evenodd" d="M2 14s1-1 6-1 6 1 6 1v1H2v-1z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <input
+                    type="number"
+                    name="maxCapacity"
+                    placeholder="Maximum Attendees"
+                    value={form.maxCapacity}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full p-2 border ${errors.maxCapacity ? "border-red-500" : "border-gray-300"} rounded pl-10`}
+                    min="1"
+                  />
+                </div>
+                {errors.maxCapacity && <p className="text-sm text-red-600 mt-1">{errors.maxCapacity}</p>}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Event Description</label>
+              <textarea
+                name="description"
+                placeholder="Event Description"
+                value={form.description}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded resize-y"
+                rows="4"
+              ></textarea>
+            </div>
+          </div>
+
+          {/* Upload Banner Card */}
+          <div className="p-4 bg-white rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Upload Banner</h2>
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                  setPhoto(file);
+                  setPreviewUrl(URL.createObjectURL(file));
+                }
+              }}
+              className="border-2 border-dashed border-gray-300 rounded p-6 flex flex-col items-center justify-center text-center cursor-pointer"
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+            >
+              {previewUrl ? (
+                <img src={previewUrl} alt="preview" className="max-h-48 object-contain mb-3 rounded" />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400 mb-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0016.586 6L13 2.414A2 2 0 0011.586 2H4z" />
+                </svg>
+              )}
+              <p className="text-sm text-gray-600">Drag & drop an image here, or click to select</p>
+              <p className="text-sm text-gray-500 mt-2">Upload Event Banner / Poster</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="photo"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setPhoto(file);
+                    setPreviewUrl(URL.createObjectURL(file));
+                  }
+                }}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <button
+              type="submit"
+              className="bg-blue-600 text-white py-3 px-4 rounded hover:bg-blue-700 w-full md:w-auto flex-1"
+            >
+              Create Event
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setForm({ name: "", location: "", time: "", maxCapacity: "", description: "" });
+                setPhoto(null);
+                setPreviewUrl(null);
+                setErrors({});
+              }}
+              className="border border-gray-300 text-gray-700 py-3 px-4 rounded hover:bg-gray-100 w-full md:w-auto flex-1"
+            >
+              Reset Form
+            </button>
+          </div>
         </form>
       </div>
+
+      <Toast open={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: "" })} />
     </div>
   );
 }
