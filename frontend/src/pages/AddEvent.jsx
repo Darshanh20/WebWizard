@@ -22,8 +22,6 @@ export default function AddEvent() {
   const [toast, setToast] = useState({ show: false, message: "" });
   const navigate = useNavigate();
   const fileInputRef = useRef();
-  const startDateRef = useRef();
-  const startTimeRef = useRef();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -195,36 +193,12 @@ export default function AddEvent() {
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Event Date & Time *</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        if (startDateRef.current) {
-                          if (typeof startDateRef.current.showPicker === "function") {
-                            startDateRef.current.showPicker();
-                          } else {
-                            startDateRef.current.focus();
-                            startDateRef.current.click();
-                          }
-                        }
-                      } catch (e) {
-                        startDateRef.current && startDateRef.current.focus();
-                      }
-                    }}
-                    className="text-blue-600 hover:text-blue-700"
-                    aria-label="Open calendar"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M6 2a1 1 0 011 1v1h6V3a1 1 0 112 0v1h1a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V3a1 1 0 011-1zM4 8h12v7H4V8z" />
-                    </svg>
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-2">
                   <div>
                     <label className="text-xs text-gray-500">Start Date</label>
                     <input
-                      ref={startDateRef}
                       type="date"
                       name="startDate"
                       value={form.startDate}
@@ -237,7 +211,6 @@ export default function AddEvent() {
                   <div>
                     <label className="text-xs text-gray-500">Start Time</label>
                     <input
-                      ref={startTimeRef}
                       type="time"
                       name="startTime"
                       value={form.startTime}

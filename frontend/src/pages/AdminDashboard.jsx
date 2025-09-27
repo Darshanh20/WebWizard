@@ -37,11 +37,9 @@ export default function AdminDashboard() {
     // Close the sidebar when any internal link is clicked (capture phase) on small screens.
     useEffect(() => {
       const onDocClick = (e) => {
-        // Only react for small screens where the drawer can be toggled
-        if (window.innerWidth >= 768) return;
         const a = e.target.closest && e.target.closest('a');
         if (!a) return;
-        // Close for any anchor click on small screens (covers react-router Link and nested elements)
+        // Close for any anchor click (covers react-router Link and nested elements)
         setSidebarOpen(false);
       };
 
@@ -69,6 +67,29 @@ export default function AdminDashboard() {
     navigate("/login");
   };
 
+  // Build breadcrumb segments from the current location
+  const breadcrumbNameMap = {
+    admin: "Admin",
+    events: "Events",
+    add: "Add Event",
+    manage: "Manage Events",
+  };
+
+  const buildBreadcrumbs = () => {
+    const raw = location.pathname.replace(/^\//, '').split('/').filter(Boolean);
+    const crumbs = [];
+    raw.forEach((seg, idx) => {
+      const to = '/' + raw.slice(0, idx + 1).join('/');
+      const name = breadcrumbNameMap[seg] || seg.charAt(0).toUpperCase() + seg.slice(1);
+      crumbs.push({ name, to });
+    });
+    // If empty (root /admin), show Admin
+    if (crumbs.length === 0 && location.pathname === '/admin') {
+      crumbs.push({ name: 'Admin', to: '/admin' });
+    }
+    return crumbs;
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -92,8 +113,17 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Backdrop (sibling of sidebar so stacking works reliably) */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30"
+          style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Main content */}
-  <div className={`flex-1 flex flex-col overflow-hidden ${sidebarOpen ? 'pl-64' : ''}`}>
+  <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className="flex justify-between items-center p-4 bg-white shadow-md">
           <div className="flex items-center space-x-3">
@@ -112,11 +142,26 @@ export default function AdminDashboard() {
             <span className="text-gray-700">Welcome, {adminName}</span>
           </div>
         </header>
-
-        {/* Backdrop for small screens */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden" onClick={() => setSidebarOpen(false)}></div>
-        )}
+        {/* Breadcrumbs */}
+        <div className="bg-white border-b">
+          <div className="container mx-auto px-4 py-2 text-sm text-gray-600">
+            {(() => {
+              const crumbs = buildBreadcrumbs();
+              return crumbs.map((c, i) => (
+                <span key={c.to} className="inline-block">
+                  {i < crumbs.length - 1 ? (
+                    <>
+                      <Link to={c.to} className="text-blue-600 hover:underline">{c.name}</Link>
+                      <span className="mx-2">/</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-800">{c.name}</span>
+                  )}
+                </span>
+              ));
+            })()}
+          </div>
+        </div>
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-4">
