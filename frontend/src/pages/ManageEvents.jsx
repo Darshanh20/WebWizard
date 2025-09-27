@@ -108,7 +108,7 @@ export default function ManageEvents() {
             onClick={handleRefresh}
             disabled={loading}
             aria-label="Refresh events"
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white ${loading ? 'bg-green-400 opacity-70 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+            className={`btn-ww ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             Refresh
           </button>
@@ -155,7 +155,8 @@ export default function ManageEvents() {
                           <button
                             onClick={() => navigate(`/admin/events/${event._id}`)}
                             aria-label="View details"
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                            className="w-8 h-8 flex items-center justify-center rounded-full text-white shadow-sm"
+                            style={{ backgroundColor: 'var(--ww-mid)' }}
                           >
                             <svg className="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

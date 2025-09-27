@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+:root{
+	--ww-deep: #8DBCC7;
+	--ww-mid:  #A4CCD9;
+	--ww-pale: #C4E1E6;
+	--ww-mint: #EBFFD8;
+}
+
+/* Gentle background and small helper utilities */
+body{
+	background: linear-gradient(180deg, var(--ww-pale) 0%, #ffffff 60%);
+}
+
+.btn-ww{
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 9999px;
+	padding: 0.375rem 0.75rem; /* close to px-3 py-1.5 */
+	font-size: 0.875rem; /* text-sm */
+	font-weight: 500;
+	color: white;
+	background-color: var(--ww-mid);
+	transition: background-color 160ms ease;
+}
+.btn-ww:hover{
+	background-color: var(--ww-deep);
+}
+
+.card-ww{
+	background: rgba(255,255,255,0.8);
+	box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+	border-radius: 12px;
+}
