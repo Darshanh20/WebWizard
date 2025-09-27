@@ -109,15 +109,45 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', auth, adminAuth, async (req, res) => {
   try {
     const { name, location, time, maxCapacity, description, photoUrl } = req.body;
+    
+    // Find the event first to validate updates
+    const existingEvent = await Event.findById(req.params.id);
+    if (!existingEvent) {
+      return res.status(404).json({ msg: 'Event not found' });
+    }
+
+    // Validate maxCapacity
+    if (maxCapacity !== undefined) {
+      const newCapacity = parseInt(maxCapacity);
+      if (isNaN(newCapacity) || newCapacity < 1) {
+        return res.status(400).json({ msg: 'Capacity must be a positive number' });
+      }
+      if (newCapacity < existingEvent.registrations.length) {
+        return res.status(400).json({ 
+          msg: `Cannot set capacity below current number of registrations (${existingEvent.registrations.length})` 
+        });
+      }
+    }
+
+    // Prepare updated fields
     const updatedFields = { name, location, time, maxCapacity, description };
+    
+    // Remove undefined fields to avoid overwriting with null
+    Object.keys(updatedFields).forEach(key => 
+      updatedFields[key] === undefined && delete updatedFields[key]
+    );
 
     // Use photoUrl if provided, otherwise leave existing photo unchanged
     if (photoUrl !== undefined) { // Check for explicit undefined to allow clearing photo
       updatedFields.photo = photoUrl;
     }
 
-    const event = await Event.findByIdAndUpdate(req.params.id, updatedFields, { new: true });
-    if (!event) return res.status(404).json({ msg: 'Event not found' });
+    const event = await Event.findByIdAndUpdate(
+      req.params.id, 
+      { $set: updatedFields },
+      { new: true, runValidators: true }
+    );
+    
     res.json(event);
   } catch (err) {
     console.error(err);
