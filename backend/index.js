@@ -19,6 +19,11 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/events', require('./routes/events'));
+
+// Serve static uploaded files
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
   res.send('API is working 🚀');

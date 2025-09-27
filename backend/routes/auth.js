@@ -16,11 +16,11 @@ router.post('/register', async (req, res) => {
     if (existing) return res.status(400).json({ msg: 'Email already registered' });
 
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = new User({ name, email, password: hashed });
+    const user = new User({ name, email, password: hashed, role: 'student' });
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
 
   } catch (err) {
     console.error(err);
@@ -40,8 +40,8 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
 
   } catch (err) {
     console.error(err);

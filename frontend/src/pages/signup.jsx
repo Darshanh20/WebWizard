@@ -11,7 +11,15 @@ export default function Signup() {
     try {
       const { data } = await API.post("/auth/register", form);
       localStorage.setItem("token", data.token);
-      navigate("/");
+      localStorage.setItem("role", data.user.role);
+      localStorage.setItem("email", data.user.email);
+      if (data.user.role === "admin") {
+        navigate("/admin");
+      } else if (data.user.role === "student") {
+        navigate("/student");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       alert(err.response?.data?.msg || "Signup failed");
     }
