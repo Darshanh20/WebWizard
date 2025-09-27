@@ -45,7 +45,8 @@ router.post('/', auth, adminAuth, upload.single('photo'), async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const events = await Event.find()
-      .populate('registrations', 'name email') // Populate registrations for student view
+      .populate('registrations', 'name email')
+      .populate('waitlist', 'name email') // Populate waitlist for student view
       .sort({ time: 1 });
     res.json(events);
   } catch (err) {
@@ -156,21 +157,28 @@ router.post('/:id/unregister', auth, async (req, res) => {
       return res.status(403).json({ msg: 'Access denied. Only students can unregister from events.' });
     }
 
-    // Check if user is registered
-    if (!event.registrations.includes(req.user)) {
-      return res.status(400).json({ msg: 'You are not registered for this event.' });
+    // Check if user is registered or on waitlist
+    if (!event.registrations.includes(req.user) && !event.waitlist.includes(req.user)) {
+      return res.status(400).json({ msg: 'You are neither registered nor on the waitlist for this event.' });
     }
 
-    event.registrations = event.registrations.filter(regId => regId.toString() !== req.user.toString());
-    
-    // If there's someone on the waitlist and a spot opened up, promote them
-    if (event.waitlist.length > 0 && event.registrations.length < event.maxCapacity) {
-      const promotedUserId = event.waitlist.shift(); // Remove from waitlist
-      event.registrations.push(promotedUserId); // Add to registrations
+    let message = '';
+    if (event.registrations.includes(req.user)) {
+      event.registrations = event.registrations.filter(regId => regId.toString() !== req.user.toString());
+      message = 'Successfully unregistered from the event.';
+
+      // If there's someone on the waitlist and a spot opened up, promote them
+      if (event.waitlist.length > 0 && event.registrations.length < event.maxCapacity) {
+        const promotedUserId = event.waitlist.shift(); // Remove from waitlist
+        event.registrations.push(promotedUserId); // Add to registrations
+      }
+    } else if (event.waitlist.includes(req.user)) {
+      event.waitlist = event.waitlist.filter(waitId => waitId.toString() !== req.user.toString());
+      message = 'Successfully left the waitlist.';
     }
 
     await event.save();
-    res.status(200).json({ msg: 'Successfully unregistered from the event.' });
+    res.status(200).json({ msg: message });
 
   } catch (err) {
     console.error(err);
