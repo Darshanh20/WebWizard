@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { useState, useEffect } from "react";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
-import Homepage from "./pages/homepage";
+// import Homepage from "./pages/homepage"; // Homepage will no longer be the root element
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import AddEvent from "./pages/AddEvent";
@@ -15,9 +15,11 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   const [role, setRole] = useState(null);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
     setRole(localStorage.getItem("role"));
+    setToken(localStorage.getItem("token"));
   }, []);
 
   return (
@@ -25,14 +27,26 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        
+        {/* Root path redirects based on authentication and role */}
         <Route
           path="/"
           element={
-            <ProtectedRoute>
-              <Homepage />
-            </ProtectedRoute>
+            token ? (
+              role === "admin" ? (
+                <Navigate to="/admin" replace />
+              ) : role === "student" ? (
+                <Navigate to="/student" replace />
+              ) : (
+                <Navigate to="/login" replace /> // Fallback if role is unexpected but token exists
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
+
+        {/* Admin Dashboard and nested routes */}
         <Route
           path="/admin"
           element={
@@ -41,12 +55,14 @@ function App() {
             </ProtectedRoute>
           }
         >
+          <Route index element={<h2 className="text-2xl font-bold">Welcome to the Admin Dashboard!</h2>} />
           <Route path="events/add" element={<AddEvent />} />
           <Route path="events/manage" element={<ManageEvents />} />
           <Route path="events/edit/:id" element={<EditEvent />} />
-          <Route path="events/:id" element={<EventDetails />} /> {/* Event Details accessible by Admin for now */}
+          <Route path="events/:id" element={<EventDetails />} />
         </Route>
 
+        {/* Student Dashboard and nested routes */}
         <Route
           path="/student"
           element={
@@ -60,8 +76,8 @@ function App() {
           <Route path="events/:id" element={<EventDetails />} />
         </Route>
 
-        {/* Redirect based on role after login */}
-        <Route
+        {/* Remove the /dashboard route as / handles initial redirection */}
+        {/* <Route
           path="/dashboard"
           element={
             role === "admin" ? (
@@ -72,7 +88,7 @@ function App() {
               <Navigate to="/login" replace />
             )
           }
-        />
+        /> */}
       </Routes>
     </Router>
   );

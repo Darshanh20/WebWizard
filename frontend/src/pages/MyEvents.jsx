@@ -32,6 +32,19 @@ export default function MyEvents() {
     }
   }, [userId, navigate]);
 
+  const handleUnregister = async (id) => {
+    if (window.confirm("Are you sure you want to unregister from this event?")) {
+      try {
+        const token = localStorage.getItem("token");
+        await API.post(`/events/${id}/unregister`, {}, { headers: { "x-auth-token": token } });
+        fetchMyEvents(); // Refresh the list of events
+      } catch (err) {
+        alert(err.response?.data?.msg || "Failed to unregister from event.");
+        console.error(err);
+      }
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-4">Loading registered events...</div>;
   }
@@ -48,8 +61,7 @@ export default function MyEvents() {
           registeredEvents.map((event) => (
             <div
               key={event._id}
-              className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-200"
-              onClick={() => navigate(`/admin/events/${event._id}`)} // Re-using admin event details route
+              className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
             >
               {event.photo && (
                 <img
@@ -58,9 +70,26 @@ export default function MyEvents() {
                   className="w-full h-32 object-cover rounded-md mb-2"
                 />
               )}
-              <h3 className="text-lg font-semibold">{event.name}</h3>
-              <p className="text-sm text-gray-600">{new Date(event.time).toLocaleDateString()}</p>
+              <h3
+                className="text-lg font-semibold cursor-pointer text-blue-600 hover:underline mb-2"
+                onClick={() => navigate(`/student/events/${event._id}`)}
+              >
+                {event.name}
+              </h3>
               <p className="text-sm text-gray-600">Location: {event.location}</p>
+              <p className="text-sm text-gray-600">Time: {new Date(event.time).toLocaleString()}</p>
+              <p className="text-sm text-gray-600 mb-4">Description: {event.description}</p>
+              {!event.isEnded && (
+                <button
+                  onClick={() => handleUnregister(event._id)}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 w-full"
+                >
+                  Unregister
+                </button>
+              )}
+              {event.isEnded && (
+                <p className="text-red-500 text-sm mt-2">This event has ended.</p>
+              )}
             </div>
           ))
         ) : (
