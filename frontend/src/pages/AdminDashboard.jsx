@@ -5,6 +5,7 @@ import { API } from "../api";
 export default function AdminDashboard() {
   const [adminName, setAdminName] = useState("Admin"); // Placeholder for admin's name
   const [recentEvents, setRecentEvents] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -28,6 +29,41 @@ export default function AdminDashboard() {
     }
   }, [location.pathname]); // Re-run effect when pathname changes
 
+    // Close sidebar whenever the route changes (helps on small screens so nav closes the drawer)
+    useEffect(() => {
+      setSidebarOpen(false);
+    }, [location.pathname]);
+
+    // Close the sidebar when any internal link is clicked (capture phase) on small screens.
+    useEffect(() => {
+      const onDocClick = (e) => {
+        // Only react for small screens where the drawer can be toggled
+        if (window.innerWidth >= 768) return;
+        const a = e.target.closest && e.target.closest('a');
+        if (!a) return;
+        // Close for any anchor click on small screens (covers react-router Link and nested elements)
+        setSidebarOpen(false);
+      };
+
+      const onKey = (e) => {
+        if (e.key === 'Escape' && window.innerWidth < 768) setSidebarOpen(false);
+      };
+
+      const onPop = () => {
+        // handle browser back/forward
+        if (window.innerWidth < 768) setSidebarOpen(false);
+      };
+
+      document.addEventListener('click', onDocClick, true); // capture
+      window.addEventListener('popstate', onPop);
+      window.addEventListener('keydown', onKey);
+      return () => {
+        document.removeEventListener('click', onDocClick, true);
+        window.removeEventListener('popstate', onPop);
+        window.removeEventListener('keydown', onKey);
+      };
+    }, []);
+
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
@@ -36,14 +72,14 @@ export default function AdminDashboard() {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-800 text-white flex flex-col">
+  <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-gray-800 text-white flex flex-col transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200`}>
         <div className="p-4 text-2xl font-bold">Admin Panel</div>
-        <nav className="flex-1">
+        <nav className="flex-1" onClick={(e) => { if (e.target.closest && e.target.closest('a')) setSidebarOpen(false); }}>
           <Link to="/admin" className="block p-4 hover:bg-gray-700">Dashboard</Link>
           <div className="border-t border-gray-700 mt-2 pt-2">
             <span className="block p-4 text-gray-400">Events</span>
-            <Link to="/admin/events/add" className="block pl-8 py-2 hover:bg-gray-700">Add Event</Link>
-            <Link to="/admin/events/manage" className="block pl-8 py-2 hover:bg-gray-700">Manage Events</Link>
+            <Link to="/admin/events/add" className="block pl-8 py-2 hover:bg-gray-700" onClick={() => setSidebarOpen(false)}>Add Event</Link>
+            <Link to="/admin/events/manage" className="block pl-8 py-2 hover:bg-gray-700" onClick={() => setSidebarOpen(false)}>Manage Events</Link>
           </div>
         </nav>
         <div className="p-4">
@@ -57,14 +93,30 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+  <div className={`flex-1 flex flex-col overflow-hidden ${sidebarOpen ? 'pl-64' : ''}`}>
         {/* Top bar */}
         <header className="flex justify-between items-center p-4 bg-white shadow-md">
-          <h1 className="text-xl font-semibold">Admin Dashboard</h1>
+          <div className="flex items-center space-x-3">
+            <button
+              className="p-2 rounded hover:bg-gray-200"
+              onClick={() => setSidebarOpen((s) => !s)}
+              aria-label="Toggle menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1 className="text-xl font-semibold">Admin Dashboard</h1>
+          </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700">Welcome, {adminName}</span>
           </div>
         </header>
+
+        {/* Backdrop for small screens */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden" onClick={() => setSidebarOpen(false)}></div>
+        )}
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-4">
