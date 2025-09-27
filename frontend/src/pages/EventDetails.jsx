@@ -10,19 +10,41 @@ export default function EventDetails() {
   const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isOnWaitlist, setIsOnWaitlist] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [studentPhoneNumber, setStudentPhoneNumber] = useState("");
+  const [studentName, setStudentName] = useState("");
+  const [studentEmail, setStudentEmail] = useState("");
 
   useEffect(() => {
     const role = localStorage.getItem("role");
-    const storedUserId = localStorage.getItem("id"); // Assuming you store user ID in local storage
+    const storedUserId = localStorage.getItem("id");
+    const storedEmail = localStorage.getItem("email");
+    const storedName = localStorage.getItem("name"); // Assuming name is also stored
+
     setUserRole(role);
     setUserId(storedUserId);
+    setStudentEmail(storedEmail || "");
+    setStudentName(storedName || "");
+
+    // Fetch user's phone number
+    const fetchUserPhoneNumber = async () => {
+      try {
+        if (storedUserId) {
+          const { data } = await API.get(`/users/${storedUserId}`); // Assuming a user route exists or will be created
+          setStudentPhoneNumber(data.phoneNumber || "");
+        }
+      } catch (err) {
+        console.error("Failed to fetch user phone number:", err);
+      }
+    };
 
     const fetchEvent = async () => {
       try {
         const { data } = await API.get(`/events/${id}`);
         setEvent(data);
         setIsRegistered(data.registrations.some(reg => reg._id === storedUserId));
+        setIsOnWaitlist(data.waitlist.some(wait => wait._id === storedUserId));
         setLoading(false);
       } catch (err) {
         setError("Failed to load event details.");
@@ -30,15 +52,24 @@ export default function EventDetails() {
         console.error(err);
       }
     };
+    fetchUserPhoneNumber();
     fetchEvent();
   }, [id, userId]);
 
   const handleRegister = async () => {
     try {
       const token = localStorage.getItem("token");
-      await API.post(`/events/${id}/register`, {}, { headers: { "x-auth-token": token } });
-      alert("Successfully registered for the event!");
-      setIsRegistered(true);
+      const response = await API.post(`/events/${id}/register`, { phoneNumber: studentPhoneNumber }, { headers: { "x-auth-token": token } });
+
+      if (response.data.registered) {
+        alert("Successfully registered for the event!");
+        setIsRegistered(true);
+        setIsOnWaitlist(false);
+      } else if (response.data.waitlisted) {
+        alert("Event is full. You have been added to the waitlist!");
+        setIsOnWaitlist(true);
+        setIsRegistered(false);
+      }
       // Re-fetch event to update registration count and list
       const { data } = await API.get(`/events/${id}`);
       setEvent(data);
@@ -47,21 +78,31 @@ export default function EventDetails() {
       console.error(err);
     }
   };
+const handleUnregister = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const { status } = await API.post(
+      `/events/${id}/unregister`,
+      {},
+      { headers: { "x-auth-token": token } }
+    );
 
-  const handleUnregister = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      await API.post(`/events/${id}/unregister`, {}, { headers: { "x-auth-token": token } });
-      alert("Successfully unregistered from the event!");
+    if (status === 200) {
       setIsRegistered(false);
-      // Re-fetch event to update registration count and list
-      const { data } = await API.get(`/events/${id}`);
-      setEvent(data);
-    } catch (err) {
-      alert(err.response?.data?.msg || "Failed to unregister from event.");
-      console.error(err);
+      setIsOnWaitlist(false);
+
+      // Refresh event details
+      const res = await API.get(`/events/${id}`);
+      setEvent(res.data);
     }
-  };
+  } catch (err) {
+    // Just log error silently, no popup
+    console.error("Unregister error:", err);
+  }
+};
+
+
+  const remainingSeats = event ? event.maxCapacity - event.registrations.length : 0;
 
   if (loading) {
     return (
@@ -105,36 +146,97 @@ export default function EventDetails() {
         <p className="text-lg mb-2"><strong>Max Capacity:</strong> {event.maxCapacity}</p>
         <p className="text-lg mb-4"><strong>Description:</strong> {event.description}</p>
 
-        <h2 className="text-2xl font-semibold mb-4">Registered Students ({event.registrations.length}/{event.maxCapacity})</h2>
-        {
-          event.registrations.length > 0 ? (
-            <ul className="list-disc pl-5 mb-4">
-              {event.registrations.map((student) => (
-                <li key={student._id} className="text-gray-700">{student.name} ({student.email})</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mb-4">No students registered yet.</p>
-          )
-        }
-
-        {userRole === "student" && (
-          <button
-            onClick={handleRegister}
-            disabled={isRegistered || event.registrations.length >= event.maxCapacity || event.isEnded}
-            className={`bg-green-600 text-white p-2 rounded hover:bg-green-700 mt-4 ${isRegistered || event.registrations.length >= event.maxCapacity || event.isEnded ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {isRegistered ? "Registered" : (event.registrations.length >= event.maxCapacity ? "Event Full" : (event.isEnded ? "Event Ended" : "Register for Event"))}
-          </button>
+        {userRole === "admin" && (
+          <>
+            <h2 className="text-2xl font-semibold mb-4">Registered Students ({event.registrations.length}/{event.maxCapacity})</h2>
+            {
+              event.registrations.length > 0 ? (
+                <ul className="list-disc pl-5 mb-4">
+                  {event.registrations.map((student) => (
+                    <li key={student._id} className="text-gray-700">{student.name} ({student.email}) {student.phoneNumber && `- ${student.phoneNumber}`}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mb-4">No students registered yet.</p>
+              )
+            }
+          </>
         )}
 
-        {userRole === "student" && isRegistered && (
-          <button
-            onClick={handleUnregister}
-            className="bg-red-600 text-white p-2 rounded hover:bg-red-700 mt-4 ml-2"
-          >
-            Unregister
-          </button>
+        {userRole === "admin" && event.waitlist.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-2xl font-semibold mb-4">Waitlist ({event.waitlist.length})</h2>
+            <ul className="list-disc pl-5 mb-4">
+              {event.waitlist.map((waitlistedUser) => (
+                <li key={waitlistedUser._id} className="text-gray-700">{waitlistedUser.name} ({waitlistedUser.email}) {waitlistedUser.phoneNumber && `- ${waitlistedUser.phoneNumber}`}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {userRole === "student" && !event.isEnded && (
+          <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+            <h3 className="text-xl font-semibold mb-3">Register for this Event</h3>
+            <p className="mb-2">Remaining Seats: {remainingSeats > 0 ? remainingSeats : 0}</p>
+            {remainingSeats <= 0 && !isRegistered && !isOnWaitlist && (
+              <p className="text-yellow-700 mb-2">Seats are full. You can join the waitlist.</p>
+            )}
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Your Name"
+                value={studentName}
+                readOnly
+                className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
+              />
+              <input
+                type="email"
+                placeholder="Your Email"
+                value={studentEmail}
+                readOnly
+                className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
+              />
+              <input
+                type="tel"
+                placeholder="Phone Number (optional)"
+                value={studentPhoneNumber}
+                onChange={(e) => setStudentPhoneNumber(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+              />
+            </div>
+
+            {!isRegistered && !isOnWaitlist && (
+              <button
+                onClick={handleRegister}
+                disabled={event.isEnded}
+                className={`bg-green-600 text-white p-2 rounded hover:bg-green-700 w-full mt-4 ${event.isEnded ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {event.isEnded ? "Event Ended" : (remainingSeats > 0 ? "Register for Event" : "Join Waitlist")}
+              </button>
+            )}
+            {isRegistered && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                <p className="bg-blue-200 text-blue-800 p-2 rounded">You are registered!</p>
+                <button
+                  onClick={handleUnregister}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
+                >
+                  Unregister
+                </button>
+              </div>
+            )}
+            {isOnWaitlist && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                <p className="bg-yellow-200 text-yellow-800 p-2 rounded">You are on the waitlist!</p>
+                <button
+                  onClick={handleUnregister}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
+                >
+                  Leave Waitlist
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         <button onClick={() => navigate(-1)} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mt-4">

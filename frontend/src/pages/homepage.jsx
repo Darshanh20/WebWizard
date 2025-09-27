@@ -6,34 +6,36 @@ export default function Homepage() {
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const navigate = useNavigate();
+  const userId = localStorage.getItem("id");
+
+  const fetchUserAndEvents = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const storedUser = {
+        id: userId,
+        name: localStorage.getItem("name") || "User",
+        email: localStorage.getItem("email") || "user@example.com",
+        role: localStorage.getItem("role"),
+      };
+      setUser(storedUser);
+
+      const { data: eventsData } = await API.get("/events");
+      setEvents(eventsData);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+      localStorage.clear();
+      navigate("/login");
+    }
+  };
 
   useEffect(() => {
-    const fetchUserAndEvents = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          navigate("/login");
-          return;
-        }
-
-        const storedUser = {
-          id: localStorage.getItem("id"),
-          name: "User", // Placeholder
-          email: localStorage.getItem("email") || "user@example.com", // Use stored email or placeholder
-          role: localStorage.getItem("role"),
-        };
-        setUser(storedUser);
-
-        const { data: eventsData } = await API.get("/events");
-        setEvents(eventsData);
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-        localStorage.clear();
-        navigate("/login");
-      }
-    };
     fetchUserAndEvents();
-  }, [navigate]);
+  }, [navigate, userId]); // Add userId to dependency array
 
   const handleLogout = () => {
     localStorage.clear();
@@ -60,8 +62,8 @@ export default function Homepage() {
           events.map((event) => (
             <div
               key={event._id}
-              className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-200"
-              onClick={() => navigate(`/admin/events/${event._id}`)} // Re-using admin event details route for now
+              className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-200 relative"
+              onClick={() => navigate(`/student/events/${event._id}`)}
             >
               {event.photo && (
                 <img
@@ -72,8 +74,8 @@ export default function Homepage() {
               )}
               <h3 className="text-lg font-semibold">{event.name}</h3>
               <p className="text-sm text-gray-600">{new Date(event.time).toLocaleDateString()}</p>
+              <p className="text-sm text-gray-600">Location: {event.location}</p>
               <p className="text-sm text-gray-600">Capacity: {event.maxCapacity}</p>
-              <p className="text-sm text-gray-600">Registered: {event.registrations ? event.registrations.length : 0}</p>
             </div>
           ))
         ) : (

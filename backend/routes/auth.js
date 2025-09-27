@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { auth } = require('../middleware/auth'); // Correct import
 
 const SALT_ROUNDS = 10; // reasonable default (10-12 recommended)
 
@@ -43,6 +44,21 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
 
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+// Get user details by ID (Protected)
+router.get('/users/:id', auth, async (req, res) => {
+  try {
+    if (req.user !== req.params.id && req.role !== 'admin') {
+      return res.status(403).json({ msg: 'Access denied.' });
+    }
+    const user = await User.findById(req.params.id).select('-password'); // Exclude password
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json(user);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });

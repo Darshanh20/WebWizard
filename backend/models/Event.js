@@ -9,6 +9,7 @@ const eventSchema = new mongoose.Schema({
   description: { type: String, required: true },
   registrations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   isEnded: { type: Boolean, default: false },
+  waitlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', eventSchema);
