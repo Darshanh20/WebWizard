@@ -7,6 +7,8 @@ const eventSchema = new mongoose.Schema({
   photo: { type: String }, // URL to the uploaded photo
   maxCapacity: { type: Number, required: true, min: 1 },
   description: { type: String, required: true },
+  registrations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  isEnded: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', eventSchema);

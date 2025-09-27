@@ -5,7 +5,12 @@ import Signup from "./pages/signup";
 import Homepage from "./pages/homepage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
-import EventsManagement from "./pages/EventsManagement";
+import AddEvent from "./pages/AddEvent";
+import ManageEvents from "./pages/ManageEvents";
+import EditEvent from "./pages/EditEvent";
+import EventDetails from "./pages/EventDetails";
+import MyEvents from "./pages/MyEvents";
+import AllStudentEvents from "./pages/AllStudentEvents";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -36,9 +41,12 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<h2 className="text-2xl font-bold">Welcome to the Admin Dashboard!</h2>} />
-          <Route path="events" element={<EventsManagement />} />
+          <Route path="events/add" element={<AddEvent />} />
+          <Route path="events/manage" element={<ManageEvents />} />
+          <Route path="events/edit/:id" element={<EditEvent />} />
+          <Route path="events/:id" element={<EventDetails />} /> {/* Event Details accessible by Admin for now */}
         </Route>
+
         <Route
           path="/student"
           element={
@@ -46,7 +54,12 @@ function App() {
               <StudentDashboard />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<MyEvents />} />
+          <Route path="all-events" element={<AllStudentEvents />} />
+          <Route path="events/:id" element={<EventDetails />} />
+        </Route>
+
         {/* Redirect based on role after login */}
         <Route
           path="/dashboard"

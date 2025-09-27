@@ -13,6 +13,7 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.user.role);
       localStorage.setItem("email", data.user.email);
+      localStorage.setItem("id", data.user.id);
       if (data.user.role === "admin") {
         navigate("/admin");
       } else if (data.user.role === "student") {
