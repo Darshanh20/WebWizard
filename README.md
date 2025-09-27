@@ -38,7 +38,6 @@ The platform ensures that:
 - ⚛ React.js (UI and routing)
 - 🎨 Tailwind CSS (responsive minimal UI)
 - 🔄 Axios (backend communication)
-- 🖼 Cloudinary (optional for image uploads)
 
 ### Backend
 - 🟢 Node.js (runtime)
@@ -50,10 +49,7 @@ The platform ensures that:
 - 📦 Mongoose ORM
 
 ### Other Tools
-- 🌩 Supabase / Firebase (Optional for auth or storage)
 - 🛠 Postman (API testing)
-- 🚀 Vercel / Netlify (frontend deployment)
-- ☁ Render / Railway (backend deployment)
 
 ---
 
@@ -221,7 +217,6 @@ npm run dev
 
 ## 🔮 Future Enhancements
 
-- 📱 Mobile App (React Native / Flutter).
 - 🔔 Email & SMS Notifications.
 - 📊 Analytics Dashboard with charts.
 - 🤝 Collaboration Events (multiple admins).
@@ -231,13 +226,7 @@ npm run dev
 
 ## Team Members
 
-- Darshan Hotchandani –
-- Krish Kamani -
+- Darshan Hotchandani[23DIT017] –
+- Krish Kamani[23DIT021] -
 ---
 
-If you'd like, I can also:
-- Add a short "How to run locally" script for Windows (PowerShell) with example commands.
-- Add deployment guides for Vercel + Render or Netlify + Railway.
-- Add badges and a CONTRIBUTING.md or CODE_OF_CONDUCT.md.
-
-Would you like any of those improvements added to the README now?
