@@ -1,9 +1,36 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { API } from "../api";
 import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
 
 export default function AddEvent() {
+  useEffect(() => {
+    console.log('AddEvent mounted');
+  }, []);
+
+  class ErrorBoundary extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+      return { hasError: true, error };
+    }
+    componentDidCatch(error, info) {
+      console.error('ErrorBoundary caught', error, info);
+    }
+    render() {
+      if (this.state.hasError) {
+        return (
+          <div className="p-6 bg-red-50 border border-red-200 rounded">
+            <h2 className="text-lg font-semibold text-red-700">Something went wrong rendering the Add Event page.</h2>
+            <pre className="text-sm text-gray-700 mt-2">{String(this.state.error)}</pre>
+          </div>
+        );
+      }
+      return this.props.children;
+    }
+  }
   const [form, setForm] = useState({
     name: "",
     location: "",
@@ -107,6 +134,7 @@ export default function AddEvent() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Add New Event</h1>
 
@@ -337,5 +365,6 @@ export default function AddEvent() {
 
       <Toast open={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: "" })} />
     </div>
+    </ErrorBoundary>
   );
 }
