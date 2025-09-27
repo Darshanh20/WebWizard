@@ -15,6 +15,29 @@ export default function EventDetails() {
   const [studentPhoneNumber, setStudentPhoneNumber] = useState("");
   const [studentName, setStudentName] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
+  const [listView, setListView] = useState("registrations"); // 'registrations' or 'waitlist'
+
+  // fetchEvent is defined here so it can be used by the effect and by UI (refresh)
+  const fetchEvent = async () => {
+    try {
+      setLoading(true);
+      const { data } = await API.get(`/events/${id}`);
+      const safeData = {
+        ...data,
+        registrations: Array.isArray(data.registrations) ? data.registrations : [],
+        waitlist: Array.isArray(data.waitlist) ? data.waitlist : [],
+      };
+      setEvent(safeData);
+      const storedUserId = localStorage.getItem("id");
+      setIsRegistered(safeData.registrations.some((reg) => reg && reg._id === storedUserId));
+      setIsOnWaitlist(safeData.waitlist.some((wait) => wait && wait._id === storedUserId));
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load event details.");
+      setLoading(false);
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     const role = localStorage.getItem("role");
@@ -39,23 +62,41 @@ export default function EventDetails() {
         console.error("Failed to fetch user phone number:", err);
       }
     };
-
-    const fetchEvent = async () => {
-      try {
-        const { data } = await API.get(`/events/${id}`);
-        setEvent(data);
-        setIsRegistered(data.registrations.some(reg => reg._id === storedUserId));
-        setIsOnWaitlist(data.waitlist.some(wait => wait._id === storedUserId));
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to load event details.");
-        setLoading(false);
-        console.error(err);
-      }
-    };
     fetchUserPhoneNumber();
     fetchEvent();
-  }, [id, userId]);
+  }, [id]);
+
+  // allow manual refresh from UI
+  const refreshEvent = async () => {
+    await fetchEvent();
+  };
+
+  // export registrations to CSV (Excel-friendly)
+  const exportRegistrationsToCSV = () => {
+    if (!event || !Array.isArray(event.registrations) || event.registrations.length === 0) {
+      alert('No registered students to export.');
+      return;
+    }
+
+    const headers = ['#', 'Name', 'Email', 'Phone'];
+    const rows = event.registrations.map((s, i) => [i + 1, s.name || '', s.email || '', s.phoneNumber || '']);
+
+    // build CSV, escape quotes
+    const escape = (val) => `"${String(val).replace(/"/g, '""')}"`;
+    const csvContent = [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+
+    // prepend BOM for Excel UTF-8
+    const blob = new Blob(["\uFEFF", csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const nameSafe = (event.name || 'event').replace(/[^a-z0-9-_]/gi, '_').toLowerCase();
+    a.download = `${nameSafe}_registrations.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleRegister = async () => {
     if (studentPhoneNumber.length !== 10) {
@@ -118,7 +159,7 @@ export default function EventDetails() {
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-3xl font-bold mb-6">Error: {error}</h1>
-        <button onClick={() => navigate(-1)} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Go Back</button>
+  <button onClick={() => navigate('/admin/events/manage')} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Go Back</button>
       </div>
     );
   }
@@ -133,123 +174,185 @@ export default function EventDetails() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Event Details: {event.name}</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        {event.photo && (
-          <img
-            src={`http://localhost:5000${event.photo}`}
-            alt={event.name}
-            className="w-full h-64 object-cover rounded-md mb-4"
-          />
-        )}
-        <p className="text-lg mb-2"><strong>Location:</strong> {event.location}</p>
-        <p className="text-lg mb-2"><strong>Time:</strong> {new Date(event.time).toLocaleString()}</p>
-        <p className="text-lg mb-2"><strong>Max Capacity:</strong> {event.maxCapacity}</p>
-        <p className="text-lg mb-4"><strong>Description:</strong> {event.description}</p>
+    <div className="container mx-auto p-4" style={{ fontSize: '105%' }}>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Event Details</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={refreshEvent}
+            disabled={loading}
+            aria-label="Refresh event"
+            className={`px-3 py-2 rounded text-sm text-white ${loading ? 'bg-green-400 opacity-70 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className={`px-3 py-2 rounded text-sm text-white bg-blue-600 hover:bg-blue-700`}>
+            Back
+          </button>
+        </div>
+      </div>
 
-        {userRole === "admin" && (
-          <>
-            <h2 className="text-2xl font-semibold mb-4">Registered Students ({event.registrations.length}/{event.maxCapacity})</h2>
-            {
-              event.registrations.length > 0 ? (
-                <ul className="list-disc pl-5 mb-4">
-                  {event.registrations.map((student) => (
-                    <li key={student._id} className="text-gray-700">{student.name} ({student.email}) {student.phoneNumber && `- ${student.phoneNumber}`}</li>
+      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1">
+            {event.photo && (
+              <img
+                src={`http://localhost:5000${event.photo}`}
+                alt={event.name}
+                className="w-full h-48 object-cover rounded-md"
+              />
+            )}
+          </div>
+          <div className="md:col-span-2">
+            <h2 className="text-2xl font-semibold mb-2">{event.name}</h2>
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
+              <div><span className="font-bold">Location:</span> {event.location || '-'}</div>
+              <div><span className="font-bold">Time:</span> {event.time ? new Date(event.time).toLocaleString() : '-'}</div>
+              <div><span className="font-bold">Max Capacity:</span> {event.maxCapacity}</div>
+              <div><span className="font-bold">Registered:</span> {event.registrations.length}</div>
+            </div>
+            <div>
+              <h3 className="font-bold mb-1">Description</h3>
+              <p className="text-sm text-gray-700">{event.description || '-'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-lg shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setListView('registrations')}
+              className={`px-3 py-2 rounded ${listView === 'registrations' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+              Registered ({event.registrations.length})
+            </button>
+            <button
+              onClick={() => setListView('waitlist')}
+              className={`px-3 py-2 rounded ${listView === 'waitlist' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+              Waiting List ({event.waitlist.length})
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportRegistrationsToCSV}
+              disabled={!event || !Array.isArray(event.registrations) || event.registrations.length === 0}
+              className={`px-3 py-2 rounded text-sm ${(!event || !Array.isArray(event.registrations) || event.registrations.length === 0) ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        {listView === 'registrations' ? (
+          <div className="overflow-x-auto shadow-sm rounded-lg">
+            {event.registrations.length === 0 ? (
+              <p className="text-sm text-gray-600">No registered students.</p>
+            ) : (
+              <table className="min-w-full table-auto" style={{ fontSize: '100%' }}>
+                <thead>
+                  <tr className="bg-white/90 border-b border-gray-200">
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Sr. No.</th>
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Name</th>
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Email</th>
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Phone</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {event.registrations.map((student, idx) => (
+                    <tr key={student._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{idx + 1}</td>
+                      <td className="px-4 py-2 text-sm">{student.name}</td>
+                      <td className="px-4 py-2 text-sm">{student.email}</td>
+                      <td className="px-4 py-2 text-sm">{student.phoneNumber || '-'}</td>
+                    </tr>
                   ))}
-                </ul>
-              ) : (
-                <p className="mb-4">No students registered yet.</p>
-              )
-            }
-          </>
-        )}
-
-        {userRole === "admin" && event.waitlist.length > 0 && (
-          <div className="mt-6">
-            <h2 className="text-2xl font-semibold mb-4">Waitlist ({event.waitlist.length})</h2>
-            <ul className="list-disc pl-5 mb-4">
-              {event.waitlist.map((waitlistedUser) => (
-                <li key={waitlistedUser._id} className="text-gray-700">{waitlistedUser.name} ({waitlistedUser.email}) {waitlistedUser.phoneNumber && `- ${waitlistedUser.phoneNumber}`}</li>
-              ))}
-            </ul>
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto shadow-sm rounded-lg">
+            {event.waitlist.length === 0 ? (
+              <p className="text-sm text-gray-600">No users on the waiting list.</p>
+            ) : (
+              <table className="min-w-full table-auto" style={{ fontSize: '100%' }}>
+                <thead>
+                  <tr className="bg-white/90 border-b border-gray-200">
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Sr. No.</th>
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Name</th>
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Email</th>
+                    <th className="px-4 py-2 sticky top-0 text-left text-sm font-semibold text-gray-700">Phone</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {event.waitlist.map((student, idx) => (
+                    <tr key={student._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{idx + 1}</td>
+                      <td className="px-4 py-2 text-sm">{student.name}</td>
+                      <td className="px-4 py-2 text-sm">{student.email}</td>
+                      <td className="px-4 py-2 text-sm">{student.phoneNumber || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
+      </div>
 
         {userRole === "student" && !event.isEnded && (
-          <div className="mt-6 p-6 border rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 shadow-md">
-            <h3 className="text-2xl font-bold mb-4 text-gray-800">Register for this Event</h3>
-            <p className="mb-3 text-gray-700">Remaining Seats: <span className="font-semibold">{remainingSeats > 0 ? remainingSeats : 0}</span></p>
-
+          <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+            <h3 className="text-xl font-semibold mb-3">Register for this Event</h3>
+            <p className="mb-2">Remaining Seats: {remainingSeats > 0 ? remainingSeats : 0}</p>
             {remainingSeats <= 0 && !isRegistered && !isOnWaitlist && (
-              <p className="mb-3 p-2 bg-yellow-100 text-yellow-800 rounded-md shadow-sm">
-                Seats are full. You can join the waitlist.
-              </p>
+              <p className="text-yellow-700 mb-2">Seats are full. You can join the waitlist.</p>
             )}
-
-            <div className="space-y-3 mb-4">
+            <div className="space-y-3">
               <input
                 type="text"
                 placeholder="Your Name"
                 value={studentName}
                 readOnly
-                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-200 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-400"
+                className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
               />
               <input
                 type="email"
                 placeholder="Your Email"
                 value={studentEmail}
                 readOnly
-                className="w-full p-3 border border-gray-300 rounded-lg bg-gray-200 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-400"
+                className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
               />
               <input
                 type="tel"
-                placeholder="Phone Number (10 digits)"
+                placeholder="Phone Number (optional)"
                 value={studentPhoneNumber}
                 onChange={(e) => setStudentPhoneNumber(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
-                required
-                pattern="[0-9]{10}"
-                title="Phone number must be 10 digits"
+                className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
 
             {!isRegistered && !isOnWaitlist && (
               <button
                 onClick={handleRegister}
-                className={`w-full p-3 rounded-lg text-white font-semibold transition duration-300 
-          ${remainingSeats > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}
+                disabled={event.isEnded}
+                className={`bg-green-600 text-white p-2 rounded hover:bg-green-700 w-full mt-4 ${event.isEnded ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {remainingSeats > 0 ? "Register for Event" : "Join Waitlist"}
+                {event.isEnded ? "Event Ended" : (remainingSeats > 0 ? "Register for Event" : "Join Waitlist")}
               </button>
             )}
-
             {isRegistered && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                <p className="bg-blue-200 text-blue-800 p-2 rounded">You are registered!</p>
-                <button
-                  onClick={handleUnregister}
-                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 cursor-pointer"
-                >
-                  Unregister
-                </button>
+              <div className="mt-4 p-4 bg-blue-100 text-blue-800 rounded-lg shadow-sm flex justify-between items-center">
+                <span>You are registered!</span>
+                <button onClick={handleUnregister} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Unregister</button>
               </div>
             )}
-
             {isOnWaitlist && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                <p className="bg-yellow-200 text-yellow-800 p-2 rounded">
-                  You are on the waitlist! (
-                  {(() => {
-                    const pos = event.waitlist.findIndex(wait => wait._id === userId);
-                    return pos !== -1 ? `Position: ${pos + 1}` : "";
-                  })()}
-                  )
-                </p>
-                <button
-                  onClick={handleUnregister}
-                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 cursor-pointer"
-                >
+              <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-sm flex justify-between items-center">
+                <span>
+                  You are on the waitlist! (Position: {event.waitlist.findIndex(wait => wait._id === userId) + 1})
+                </span>
+                <button onClick={handleUnregister} className="bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700">
                   Leave Waitlist
                 </button>
               </div>
@@ -258,7 +361,7 @@ export default function EventDetails() {
         )}
 
 
-        <button onClick={() => navigate(-1)} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mt-4 cursor-pointer">
+        <button onClick={() => navigate(-1)} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mt-4">
           Go Back
         </button>
       </div>

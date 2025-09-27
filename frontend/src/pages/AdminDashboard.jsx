@@ -79,7 +79,12 @@ export default function AdminDashboard() {
     const raw = location.pathname.replace(/^\//, '').split('/').filter(Boolean);
     const crumbs = [];
     raw.forEach((seg, idx) => {
-      const to = '/' + raw.slice(0, idx + 1).join('/');
+      // default target path for this segment
+      let to = '/' + raw.slice(0, idx + 1).join('/');
+      // Special-case: when inside /admin/events, point the 'events' crumb to the manage page
+      if (raw[0] === 'admin' && seg === 'events') {
+        to = '/admin/events/manage';
+      }
       const name = breadcrumbNameMap[seg] || seg.charAt(0).toUpperCase() + seg.slice(1);
       crumbs.push({ name, to });
     });
