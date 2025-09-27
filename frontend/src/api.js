@@ -12,3 +12,21 @@ API.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Event methods
+export const EventAPI = {
+  // Get single event
+  getEvent: (id) => API.get(`/events/${id}`),
+  
+  // Update event
+  updateEvent: (id, eventData) => API.put(`/events/${id}`, eventData),
+  
+  // Delete event
+  deleteEvent: (id) => API.delete(`/events/${id}`),
+  
+  // Register for event
+  register: (id, data) => API.post(`/events/${id}/register`, data),
+  
+  // Unregister from event
+  unregister: (id) => API.post(`/events/${id}/unregister`),
+};
