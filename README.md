@@ -229,12 +229,10 @@ npm run dev
 
 ---
 
-## 👨‍💻 Contributors
+## Team Members
 
-- Darshan Hotchandani – Lead Developer
-
-(Feel free to add team members and contribution guidelines.)
-
+- Darshan Hotchandani –
+- Krish Kamani -
 ---
 
 If you'd like, I can also:
