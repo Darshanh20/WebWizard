@@ -55,7 +55,6 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<h2 className="text-2xl font-bold">Welcome to the Admin Dashboard!</h2>} />
           <Route path="events/add" element={<AddEvent />} />
           <Route path="events/manage" element={<ManageEvents />} />
           <Route path="events/edit/:id" element={<EditEvent />} />

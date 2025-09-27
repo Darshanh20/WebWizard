@@ -39,6 +39,7 @@ export default function AllStudentEvents() {
         {allEvents.length > 0 ? (
           allEvents.map((event) => {
             const isRegistered = event.registrations.some(reg => reg._id === userId);
+            const isOnWaitlist = event.waitlist.some(wait => wait._id === userId);
             return (
               <div
                 key={event._id}
@@ -48,6 +49,11 @@ export default function AllStudentEvents() {
                 {isRegistered && (
                   <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
                     Registered
+                  </span>
+                )}
+                {!isRegistered && isOnWaitlist && (
+                  <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                    In Queue
                   </span>
                 )}
                 {event.photo && (

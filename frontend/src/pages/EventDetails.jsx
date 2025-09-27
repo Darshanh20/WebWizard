@@ -78,29 +78,26 @@ export default function EventDetails() {
       console.error(err);
     }
   };
-const handleUnregister = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const { status } = await API.post(
-      `/events/${id}/unregister`,
-      {},
-      { headers: { "x-auth-token": token } }
-    );
 
-    if (status === 200) {
+  const handleUnregister = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      // Correctly call the unregister endpoint
+      const response = await API.post(`/events/${id}/unregister`, {}, { headers: { "x-auth-token": token } });
+
+      // After successful unregistration, update state
       setIsRegistered(false);
       setIsOnWaitlist(false);
+      alert(response.data.msg); // Use the message from the backend
 
-      // Refresh event details
-      const res = await API.get(`/events/${id}`);
-      setEvent(res.data);
+      // Re-fetch event to update registration count and list
+      const { data } = await API.get(`/events/${id}`);
+      setEvent(data);
+    } catch (err) {
+      alert(err.response?.data?.msg || "Failed to unregister/leave waitlist.");
+      console.error("Unregister error:", err);
     }
-  } catch (err) {
-    // Just log error silently, no popup
-    console.error("Unregister error:", err);
-  }
-};
-
+  };
 
   const remainingSeats = event ? event.maxCapacity - event.registrations.length : 0;
 
@@ -227,7 +224,14 @@ const handleUnregister = async () => {
             )}
             {isOnWaitlist && (
               <div className="flex flex-wrap gap-2 mt-4">
-                <p className="bg-yellow-200 text-yellow-800 p-2 rounded">You are on the waitlist!</p>
+                <p className="bg-yellow-200 text-yellow-800 p-2 rounded">
+                  You are on the waitlist! (
+                  {(() => {
+                    const pos = event.waitlist.findIndex(wait => wait._id === userId);
+                    return pos !== -1 ? `Position: ${pos + 1}` : "";
+                  })()}
+                  )
+                </p>
                 <button
                   onClick={handleUnregister}
                   className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
