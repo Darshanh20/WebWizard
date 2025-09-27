@@ -3,26 +3,27 @@ const router = express.Router();
 const Event = require('../models/Event');
 const User = require('../models/User'); // Import User model
 const { auth, adminAuth } = require('../middleware/auth');
-const multer = require('multer');
+const multer = require('multer'); // Keep multer import for now, might remove if not needed elsewhere
 const path = require('path');
 
-// Configure Multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Files will be stored in the 'uploads' directory
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
-  },
-});
+// Configure Multer for file uploads - NO LONGER NEEDED FOR URL-BASED PHOTOS
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, 'uploads/'); // Files will be stored in the 'uploads' directory
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
+//   },
+// });
 
-const upload = multer({ storage: storage });
+// const upload = multer({ storage: storage });
 
 // Create a new event (Admin only)
-router.post('/', auth, adminAuth, upload.single('photo'), async (req, res) => {
+router.post('/', auth, adminAuth, async (req, res) => {
   try {
-    const { name, location, time, maxCapacity, description } = req.body;
-    const photo = req.file ? `/uploads/${req.file.filename}` : undefined;
+    const { name, location, time, maxCapacity, description, photoUrl } = req.body;
+    // Use photoUrl directly if provided
+    const photo = photoUrl;
 
     const newEvent = new Event({
       name,
@@ -70,13 +71,14 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update an event by ID (Admin only)
-router.put('/:id', auth, adminAuth, upload.single('photo'), async (req, res) => {
+router.put('/:id', auth, adminAuth, async (req, res) => {
   try {
-    const { name, location, time, maxCapacity, description } = req.body;
+    const { name, location, time, maxCapacity, description, photoUrl } = req.body;
     const updatedFields = { name, location, time, maxCapacity, description };
 
-    if (req.file) {
-      updatedFields.photo = `/uploads/${req.file.filename}`;
+    // Use photoUrl if provided, otherwise leave existing photo unchanged
+    if (photoUrl !== undefined) { // Check for explicit undefined to allow clearing photo
+      updatedFields.photo = photoUrl;
     }
 
     const event = await Event.findByIdAndUpdate(req.params.id, updatedFields, { new: true });

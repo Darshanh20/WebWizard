@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Toast from "../components/Toast";
 
 export default function AddEvent() {
+  console.log("AddEvent component rendered");
   useEffect(() => {
     console.log('AddEvent mounted');
   }, []);
@@ -52,7 +53,13 @@ export default function AddEvent() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    console.log(`handleChange: ${name}, ${value}`);
+    setForm((f) => {
+      console.log("Previous form state:", f);
+      const newState = { ...f, [name]: value };
+      console.log("New form state:", newState);
+      return newState;
+    });
   };
 
   useEffect(() => {
@@ -80,11 +87,14 @@ export default function AddEvent() {
   };
 
   const handleBlur = (e) => {
+    console.log(`handleBlur: ${e.target.name}, ${e.target.value}`);
     validateField(e.target.name, e.target.value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    console.log("Submitting form with state:", form);
 
     // validate required fields
     const v1 = validateField("name", form.name);

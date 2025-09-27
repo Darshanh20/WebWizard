@@ -32,7 +32,7 @@ export default function StudentDashboard() {
         <div className="p-4">
           <button
             onClick={handleLogout}
-            className="w-full bg-red-600 text-white rounded p-2 hover:bg-red-700"
+            className="w-full bg-red-600 text-white rounded p-2 hover:bg-red-700 cursor-pointer"
           >
             Logout
           </button>

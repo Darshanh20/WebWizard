@@ -225,18 +225,31 @@ export default function EventDetails() {
             )}
 
             {isRegistered && (
-              <div className="mt-4 p-4 bg-blue-100 text-blue-800 rounded-lg shadow-sm flex justify-between items-center">
-                <span>You are registered!</span>
-                <button onClick={handleUnregister} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">Unregister</button>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <p className="bg-blue-200 text-blue-800 p-2 rounded">You are registered!</p>
+                <button
+                  onClick={handleUnregister}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 cursor-pointer"
+                >
+                  Unregister
+                </button>
               </div>
             )}
 
             {isOnWaitlist && (
-              <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-sm flex justify-between items-center">
-                <span>
-                  You are on the waitlist! (Position: {event.waitlist.findIndex(wait => wait._id === userId) + 1})
-                </span>
-                <button onClick={handleUnregister} className="bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700">
+              <div className="flex flex-wrap gap-2 mt-4">
+                <p className="bg-yellow-200 text-yellow-800 p-2 rounded">
+                  You are on the waitlist! (
+                  {(() => {
+                    const pos = event.waitlist.findIndex(wait => wait._id === userId);
+                    return pos !== -1 ? `Position: ${pos + 1}` : "";
+                  })()}
+                  )
+                </p>
+                <button
+                  onClick={handleUnregister}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 cursor-pointer"
+                >
                   Leave Waitlist
                 </button>
               </div>
@@ -245,7 +258,7 @@ export default function EventDetails() {
         )}
 
 
-        <button onClick={() => navigate(-1)} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mt-4">
+        <button onClick={() => navigate(-1)} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 mt-4 cursor-pointer">
           Go Back
         </button>
       </div>

@@ -82,7 +82,7 @@ export default function MyEvents() {
               {!event.isEnded && (
                 <button
                   onClick={() => handleUnregister(event._id)}
-                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 w-full"
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700 w-full cursor-pointer"
                 >
                   Unregister
                 </button>

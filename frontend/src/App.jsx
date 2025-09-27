@@ -14,12 +14,11 @@ import AllStudentEvents from "./pages/AllStudentEvents";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  const [role, setRole] = useState(null);
-  const [token, setToken] = useState(null);
+  const [role, setRole] = useState(localStorage.getItem("role"));
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
   useEffect(() => {
-    setRole(localStorage.getItem("role"));
-    setToken(localStorage.getItem("token"));
+    // No need to set them here, they are already initialized
   }, []);
 
   return (

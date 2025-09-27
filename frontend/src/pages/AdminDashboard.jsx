@@ -106,7 +106,7 @@ export default function AdminDashboard() {
         <div className="p-4">
           <button
             onClick={handleLogout}
-            className="w-full bg-red-600 text-white rounded p-2 hover:bg-red-700"
+            className="w-full bg-red-600 text-white rounded p-2 hover:bg-red-700 cursor-pointer"
           >
             Logout
           </button>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
         <header className="flex justify-between items-center p-4 bg-white shadow-md">
           <div className="flex items-center space-x-3">
             <button
-              className="p-2 rounded hover:bg-gray-200"
+              className="p-2 rounded hover:bg-gray-200 cursor-pointer"
               onClick={() => setSidebarOpen((s) => !s)}
               aria-label="Toggle menu"
             >

@@ -83,8 +83,7 @@ export default function ManageEvents() {
                 />
               )}
               <h3
-                className="text-lg font-semibold cursor-pointer text-blue-600 hover:underline"
-                onClick={() => navigate(`/admin/events/${event._id}`)}
+                className="text-lg font-semibold mb-2"
               >
                 {event.name} {event.isEnded && <span className="text-red-500 text-sm">(Ended)</span>}
               </h3>
@@ -96,14 +95,14 @@ export default function ManageEvents() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   onClick={() => handleEdit(event)}
-                  className="bg-yellow-500 text-white p-1 rounded text-sm hover:bg-yellow-600"
+                  className="bg-yellow-500 text-white p-1 rounded text-sm hover:bg-yellow-600 cursor-pointer"
                   disabled={event.isEnded}
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(event._id)}
-                  className="bg-red-500 text-white p-1 rounded text-sm hover:bg-red-600"
+                  className="bg-red-500 text-white p-1 rounded text-sm hover:bg-red-600 cursor-pointer"
                   disabled={event.isEnded}
                 >
                   Delete
@@ -111,7 +110,7 @@ export default function ManageEvents() {
                 {!event.isEnded && (
                   <button
                     onClick={() => handleEndEvent(event._id)}
-                    className="bg-gray-600 text-white p-1 rounded text-sm hover:bg-gray-700"
+                    className="bg-gray-600 text-white p-1 rounded text-sm hover:bg-gray-700 cursor-pointer"
                   >
                     End Event
                   </button>

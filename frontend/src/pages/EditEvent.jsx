@@ -124,14 +124,14 @@ export default function EditEvent() {
           />
           <button
             type="submit"
-            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 w-full"
+            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 w-full cursor-pointer"
           >
             Update Event
           </button>
           <button
             type="button"
             onClick={() => navigate("/admin/events/manage")}
-            className="bg-gray-400 text-white p-2 rounded hover:bg-gray-500 w-full mt-2"
+            className="bg-gray-400 text-white p-2 rounded hover:bg-gray-500 w-full mt-2 cursor-pointer"
           >
             Cancel
           </button>
