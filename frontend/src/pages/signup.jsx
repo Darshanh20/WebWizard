@@ -14,6 +14,7 @@ export default function Signup() {
       localStorage.setItem("role", data.user.role);
       localStorage.setItem("email", data.user.email);
       localStorage.setItem("id", data.user.id);
+      localStorage.setItem("name", data.user.name);
       if (data.user.role === "admin") {
         navigate("/admin");
       } else if (data.user.role === "student") {

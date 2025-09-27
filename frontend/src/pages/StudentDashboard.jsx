@@ -22,7 +22,9 @@ export default function StudentDashboard() {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <div className="w-64 bg-gray-800 text-white flex flex-col">
-        <div className="p-4 text-2xl font-bold">Student Panel</div>
+        <div className="p-6 text-2xl font-bold">
+          Welcome, {studentName} 
+        </div>
         <nav className="flex-1">
           <Link to="/student" className="block p-4 hover:bg-gray-700">My Events</Link>
           <Link to="/student/all-events" className="block p-4 hover:bg-gray-700">All Available Events</Link>
@@ -39,13 +41,6 @@ export default function StudentDashboard() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex justify-between items-center p-4 bg-white shadow-md">
-          <h1 className="text-xl font-semibold">Student Dashboard</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">Welcome, {studentName}</span>
-          </div>
-        </header>
 
         {/* Page Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200 p-4">

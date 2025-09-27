@@ -54,8 +54,9 @@ export default function EventDetails() {
     const fetchUserPhoneNumber = async () => {
       try {
         if (storedUserId) {
-          const { data } = await API.get(`/users/${storedUserId}`); // Assuming a user route exists or will be created
+          const { data } = await API.get(`/auth/users/${storedUserId}`); // Corrected endpoint
           setStudentPhoneNumber(data.phoneNumber || "");
+          setStudentName(data.name || storedName || ""); // Use fetched name, fallback to stored, then default
         }
       } catch (err) {
         console.error("Failed to fetch user phone number:", err);
@@ -98,7 +99,11 @@ export default function EventDetails() {
   };
 
   const handleRegister = async () => {
-    try {
+    if (studentPhoneNumber.length !== 10) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+    try { 
       const token = localStorage.getItem("token");
       const response = await API.post(`/events/${id}/register`, { phoneNumber: studentPhoneNumber }, { headers: { "x-auth-token": token } });
 
@@ -296,77 +301,77 @@ export default function EventDetails() {
         )}
       </div>
 
-      {userRole === "student" && !event.isEnded && (
-        <div className="mt-6 p-4 border rounded-lg bg-gray-50">
-          <h3 className="text-xl font-semibold mb-3">Register for this Event</h3>
-          <p className="mb-2">Remaining Seats: {remainingSeats > 0 ? remainingSeats : 0}</p>
-          {remainingSeats <= 0 && !isRegistered && !isOnWaitlist && (
-            <p className="text-yellow-700 mb-2">Seats are full. You can join the waitlist.</p>
-          )}
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={studentName}
-              readOnly
-              className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
-            />
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={studentEmail}
-              readOnly
-              className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
-            />
-            <input
-              type="tel"
-              placeholder="Phone Number (optional)"
-              value={studentPhoneNumber}
-              onChange={(e) => setStudentPhoneNumber(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
+        {userRole === "student" && !event.isEnded && (
+          <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+            <h3 className="text-xl font-semibold mb-3">Register for this Event</h3>
+            <p className="mb-2">Remaining Seats: {remainingSeats > 0 ? remainingSeats : 0}</p>
+            {remainingSeats <= 0 && !isRegistered && !isOnWaitlist && (
+              <p className="text-yellow-700 mb-2">Seats are full. You can join the waitlist.</p>
+            )}
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Your Name"
+                value={studentName}
+                readOnly
+                className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
+              />
+              <input
+                type="email"
+                placeholder="Your Email"
+                value={studentEmail}
+                readOnly
+                className="w-full p-2 border border-gray-300 rounded bg-gray-200 cursor-not-allowed"
+              />
+              <input
+                type="tel"
+                placeholder="Phone Number (optional)"
+                value={studentPhoneNumber}
+                onChange={(e) => setStudentPhoneNumber(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+              />
+            </div>
 
-          {!isRegistered && !isOnWaitlist && (
-            <button
-              onClick={handleRegister}
-              disabled={event.isEnded}
-              className={`bg-green-600 text-white p-2 rounded hover:bg-green-700 w-full mt-4 ${event.isEnded ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {event.isEnded ? "Event Ended" : (remainingSeats > 0 ? "Register for Event" : "Join Waitlist")}
-            </button>
-          )}
-          {isRegistered && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              <p className="bg-blue-200 text-blue-800 p-2 rounded">You are registered!</p>
+            {!isRegistered && !isOnWaitlist && (
               <button
-                onClick={handleUnregister}
-                className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
+                onClick={handleRegister}
+                disabled={event.isEnded}
+                className={`bg-green-600 text-white p-2 rounded hover:bg-green-700 w-full mt-4 ${event.isEnded ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Unregister
+                {event.isEnded ? "Event Ended" : (remainingSeats > 0 ? "Register for Event" : "Join Waitlist")}
               </button>
-            </div>
-          )}
-          {isOnWaitlist && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              <p className="bg-yellow-200 text-yellow-800 p-2 rounded">
-                You are on the waitlist! (
-                {(() => {
-                  const pos = event.waitlist.findIndex(wait => wait._id === userId);
-                  return pos !== -1 ? `Position: ${pos + 1}` : "";
-                })()}
-                )
-              </p>
-              <button
-                onClick={handleUnregister}
-                className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
-              >
-                Leave Waitlist
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {isRegistered && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                <p className="bg-blue-200 text-blue-800 p-2 rounded">You are registered!</p>
+                <button
+                  onClick={handleUnregister}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
+                >
+                  Unregister
+                </button>
+              </div>
+            )}
+            {isOnWaitlist && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                <p className="bg-yellow-200 text-yellow-800 p-2 rounded">
+                  You are on the waitlist! (
+                  {(() => {
+                    const pos = event.waitlist.findIndex(wait => wait._id === userId);
+                    return pos !== -1 ? `Position: ${pos + 1}` : "";
+                  })()}
+                  )
+                </p>
+                <button
+                  onClick={handleUnregister}
+                  className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
+                >
+                  Leave Waitlist
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
     </div>
   );
